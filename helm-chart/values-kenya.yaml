@@ -1,0 +1,80 @@
+deployment:
+  name: kenya-farmer-gateway-service
+  namespace: cf-deforestaion-kenya  
+  replicaCount: 1
+  containerName: kenya-farmer-gateway-service
+  image: 495454422438.dkr.ecr.us-west-1.amazonaws.com/kenya-farmer-gateway-service
+  resources:
+  # portName: sass-port
+  containerPort: 3000
+  # aloglocation: "/src/activity_log_development"
+  # alogname: activity-log
+  # pvcname: livestock-app-pv-claim-dev
+
+
+service:
+  type: NodePort
+  port: 3000
+  # nodePort: 31035
+
+hpa:
+  enabled: true
+  name: kenya-farmer-gateway-service-hpa-kenya
+  maxReplicas: 5
+  minReplicas: 1
+  targetCPUUtilizationPercentage: 90
+
+# ingress:
+#   name: kenya-farmer-gateway-service-ingress-kenya
+#   annotations: 
+#     kubernetes.io/ingress.class: alb
+#     alb.ingress.kubernetes.io/group.name: default-kenya
+#     alb.ingress.kubernetes.io/group.order: '50'
+#     alb.ingress.kubernetes.io/scheme: internet-facing
+#     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-1:495454422438:certificate/6b7881a0-285c-4979-845a-91571957f9c9
+#     alb.ingress.kubernetes.io/target-type: ip
+#     alb.ingress.kubernetes.io/backend-protocol: HTTP
+#     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+#     alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-1-2017-01
+#     alb.ingress.kubernetes.io/actions.ssl-redirect: '{"Type": "redirect", "RedirectConfig": { "Protocol": "HTTPS", "Port": "443", "StatusCode": "HTTP_301"}}'
+#   hostName: cf-deforestation.dimitra.dev
+#   path1: /graphql
+#   path1-ServiceName: kenya-farmer-gateway-service
+#   path2: /api
+#   path2-ServiceName: cf-sass-deforestation-kenya
+#   portNumber: 3000
+
+# config map is maintained seperately for security purpose
+configMap:
+  enabled: true
+  depname: envfile
+  name: sass-env-gateway-file
+  fileLocation: /src/.env
+  subPath: .env
+
+# redis:
+#   name: redis-server
+#   containerName: redis-container-dev
+#   image: bitnami/redis:5.0.14
+#   resources:
+#     limits:
+#       cpu: 200m
+#       memory: 400Mi
+#     requests:
+#       cpu: 195m
+#       memory: 395Mi
+#   portName: redis-port
+#   containerPort: 6379
+#   env:
+#   - name: REDIS_DB
+#     value: "1"   
+#   - name: REDIS_HOST
+#     value: "redis-server" 
+#   - name: REDIS_PORT
+#     value: "6379" 
+#   - name: "ALLOW_EMPTY_PASSWORD"
+#     value: "yes"   
+  
+# job:
+#   name: migration-hook-gateway-dev
+#   containerName: migration-hook-gateway-container-dev

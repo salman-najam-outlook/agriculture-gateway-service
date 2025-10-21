@@ -1,0 +1,92 @@
+apiVersion: skaffold/v2beta20
+kind: Config
+metadata:
+  name: livestock
+profiles:
+
+#dev
+- name: livestock-sass-gateway-dev
+  build:
+    artifacts:
+    - image: 495454422438.dkr.ecr.us-west-1.amazonaws.com/livestock-saas-gateway-ecr-dev
+  deploy:
+    helm:
+      releases:
+      - name: livestock-sass-gateway-dev
+        namespace: livestock-dev
+        chartPath: ./helm-chart
+        valuesFiles: 
+          - ./helm-chart/values-dev.yaml
+        artifactOverrides:
+          deployment.image: 495454422438.dkr.ecr.us-west-1.amazonaws.com/livestock-saas-gateway-ecr-dev
+        imageStrategy:
+          fqn: {}
+#qa
+- name: livestock-sass-gateway-qa
+  build:
+    artifacts:
+    - image: 495454422438.dkr.ecr.us-west-1.amazonaws.com/livestock-saas-gateway-ecr-qa
+  deploy:
+    helm:
+      releases:
+      - name: livestock-sass-gateway-qa
+        namespace: livestock-qa
+        chartPath: ./helm-chart
+        valuesFiles: 
+          - ./helm-chart/values-qa.yaml
+        artifactOverrides:
+          deployment.image: 495454422438.dkr.ecr.us-west-1.amazonaws.com/livestock-saas-gateway-ecr-qa
+        imageStrategy:
+          fqn: {}
+
+#prod
+- name: livestock-sass-gateway-prod
+  build:
+    artifacts:
+    - image: 495454422438.dkr.ecr.us-east-1.amazonaws.com/livestock-saas-gateway-ecr-prod
+  deploy:
+    helm:
+      releases:
+      - name: livestock-sass-gateway-prod
+        chartPath: ./helm-chart
+        valuesFiles: 
+          - ./helm-chart/values-prod.yaml
+        artifactOverrides:
+          deployment.image: 495454422438.dkr.ecr.us-east-1.amazonaws.com/livestock-saas-gateway-ecr-prod
+        imageStrategy:
+          fqn: {}  
+
+#CR_falcon_coffee_deforestation_Gateway
+- name: livestock-sass-gateway-deforestation-dev
+  build:
+    artifacts:
+    - image: 495454422438.dkr.ecr.us-west-1.amazonaws.com/livestock-saas-gateway-deforestation-ecr-dev
+  deploy:
+    helm:
+      releases:
+      - name: livestock-sass-gateway-deforestation-dev
+        namespace: livestock-sass-deforestation-dev
+        chartPath: ./helm-chart
+        valuesFiles: 
+          - ./helm-chart/values-deforestation-dev.yaml
+        artifactOverrides:
+          deployment.image: 495454422438.dkr.ecr.us-west-1.amazonaws.com/livestock-saas-gateway-deforestation-ecr-dev
+        imageStrategy:
+          fqn: {}
+#pre-prod
+- name: cf-sass-deforestation-gateway-pre-prod
+  build:
+    artifacts:
+    - image: 495454422438.dkr.ecr.us-west-1.amazonaws.com/cf-sass-deforestation-gateway-pre-prod
+  deploy:
+    helm:
+      releases:
+      - name: cf-sass-deforestation-gateway-pre-prod
+        namespace: cf-deforestaion-pre-prod 
+        chartPath: ./helm-chart
+        valuesFiles: 
+          - ./helm-chart/values-pre-prod.yaml
+        artifactOverrides:
+          deployment.image: 495454422438.dkr.ecr.us-west-1.amazonaws.com/cf-sass-deforestation-gateway-pre-prod
+        imageStrategy:
+          fqn: {}          

@@ -1,0 +1,157 @@
+import { RemoteGraphQLDataSource } from '@apollo/gateway';
+import {
+  HttpException,
+  HttpStatus,
+  MiddlewareConsumer,
+  Module,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { IntrospectAndCompose } from '@apollo/gateway';
+import { ApolloGatewayDriver, ApolloGatewayDriverConfig } from '@nestjs/apollo';
+import { GraphQLModule } from '@nestjs/graphql';
+import { ConfigModule } from '@nestjs/config';
+import { INVALID_AUTH_TOKEN, UNAUTHORIZED_USER } from './constants';
+import { verify } from 'jsonwebtoken';
+const {
+  graphqlUploadExpress, // A Koa implementation is also exported.
+} = require('graphql-upload');
+
+import { request, gql, GraphQLClient } from 'graphql-request';
+
+const decodeToken = (tokenString: string) => {
+  const decoded = verify(tokenString, 'hemantdimitraaccesstokensecret');
+  if (!decoded) {
+    throw new HttpException(
+      { message: INVALID_AUTH_TOKEN },
+      HttpStatus.UNAUTHORIZED,
+    );
+  }
+  return decoded;
+};
+
+const handleAuth = async ({ req }) => {
+  try {
+    if (req.headers.authorization) {
+      const token = req.headers.authorization;
+      const decoded: any = decodeToken(token);
+      if (!decoded.data) {
+        throw new UnauthorizedException(UNAUTHORIZED_USER);
+      }
+
+      const graphQLClient = new GraphQLClient(process.env.FARMER_SYNC_URL + '/graphql', {
+        headers: {
+          userid: decoded.data.userId,
+        },
+      });
+      const query = gql`
+        {
+          getUserCurrentMembershipPlan {
+            id
+    membership_id
+    start_date
+    end_date
+    active
+    payment_id
+    
+    membershipData{
+      satellite_report
+      membership_name
+      no_of_animals
+      description
+      pasture_report
+      other_report
+      plan_duration
+      other_config
+      organization
+      membershipFeesData{
+        per_month_fee
+        is_free_trial
+        default_status
+        in_use
+      }
+    }
+          }
+        }
+      `;
+      const memberships = await graphQLClient.request(query);
+
+      return {
+        userId: decoded.data.userId,
+        permissions: decoded.permissions,
+        authorization: `${req.headers.authorization}`,
+        memberships: memberships,
+      };
+    } else {
+      throw new UnauthorizedException(INVALID_AUTH_TOKEN);
+    }
+  } catch (err) {
+    throw new UnauthorizedException(UNAUTHORIZED_USER);
+  }
+};
+@Module({
+  imports: [
+    ConfigModule.forRoot(),
+    GraphQLModule.forRoot<ApolloGatewayDriverConfig>({
+      server: {
+        context: handleAuth,
+        cors: true,
+      },
+      driver: ApolloGatewayDriver,
+      gateway: {
+        buildService: ({ name, url }) => {
+          return new RemoteGraphQLDataSource({
+            url,
+            willSendRequest({ request, context }: any) {
+              request.http.headers.set('userId', context.userId);
+              // for now pass authorization also
+              request.http.headers.set('authorization', context.authorization);
+              request.http.headers.set('permissions', context.permissions);
+              request.http.headers.set(
+                'memberships',
+                JSON.stringify(context.memberships),
+              );
+            },
+          });
+        },
+        // supergraphSdl: new IntrospectAndCompose({
+        //   subgraphs: [
+        //     {
+        //       name: 'information',
+        //       url: process.env.INFORMATION_SERVICE_URL + '/graphql',
+        //     },
+        //     {
+        //       name: 'registration',
+        //       url: process.env.REGISTRATION_SERVICE_URL + '/graphql',
+        //     },
+        //     { name: 'goals', url: process.env.GOALS_SERVICE_URL + '/graphql' },
+        //     { name: 'sync', url: process.env.FARMER_SYNC_URL + '/graphql' },
+        //     { name: 'feed_mgmt', url: process.env.FEED_MGMT_URL + '/graphql' },
+        //   ],
+        // }),
+        supergraphSdl: new IntrospectAndCompose({
+          subgraphs: [
+            {
+              name: 'information',
+              url: process.env.INFORMATION_SERVICE_URL,
+            },
+            {
+              name: 'registration',
+              url: process.env.REGISTRATION_SERVICE_URL,
+            },
+            //{ name: 'goals', url: process.env.GOALS_SERVICE_URL },
+            { name: 'sync', url: process.env.FARMER_SYNC_URL },
+            //{ name: 'feed_mgmt', url: process.env.FEED_MGMT_URL },
+          ],
+        }),
+      },
+    }),
+  ],
+})
+export class AppModule {
+  configure(consumer: MiddlewareConsumer) {
+    //middleware to upload files
+    consumer
+      .apply(graphqlUploadExpress({ maxFileSize: 10000000, maxFiles: 10 }))
+      .forRoutes('graphql');
+  }
+}

@@ -1,0 +1,51 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cf-sass-deforestation-pre-prod-ingress
+  namespace: cf-deforestaion-pre-prod
+  annotations:
+    alb.ingress.kubernetes.io/actions.ssl-redirect: >-
+      {"Type": "redirect", "RedirectConfig": { "Protocol": "HTTPS", "Port":
+      "443", "StatusCode": "HTTP_301"}}
+    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    alb.ingress.kubernetes.io/certificate-arn: >-
+      arn:aws:acm:us-west-1:495454422438:certificate/2fb9804e-a747-4518-a496-9572d5de4ae6
+    alb.ingress.kubernetes.io/group.name: cf-deforestation-dev
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-1-2017-01
+    alb.ingress.kubernetes.io/target-type: ip
+    kubernetes.io/ingress.class: alb
+spec:
+  rules:
+    - host: cf-deforestation-pre-prod.dimitra.dev
+      http:
+        paths:
+          - path: /graphql
+            pathType: Prefix
+            backend:
+              service:
+                name: ssl-redirect
+                port:
+                  name: use-annotation
+          - path: /graphql
+            pathType: Prefix
+            backend:
+              service:
+                name: cf-sass-deforestation-gateway-pre-prod
+                port:
+                  number: 3000
+          - path: /api/*
+            pathType: Prefix
+            backend:
+              service:
+                name: ssl-redirect
+                port:
+                  name: use-annotation
+          - path: /api/*
+            pathType: Prefix
+            backend:
+              service:
+                name: cf-sass-deforestation-pre-prod
+                port:
+                  number: 3000
