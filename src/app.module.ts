@@ -20,7 +20,7 @@ const {
 import { ApolloError } from 'apollo-server-express';
 
 const decodeToken = (tokenString: string) => {
-  const decoded = verify(tokenString, process.env.JWT_SECRET || 'dimitraaccesstokensecret');
+  const decoded = verify(tokenString, process.env.JWT_SECRET || 'hemantdimitraaccesstokensecret');
   if (!decoded) {
     throw new HttpException(
       { message: INVALID_AUTH_TOKEN },
@@ -44,11 +44,10 @@ const decodeLgCommToken = (tokenString: string) => {
 const handleAuth = async ({ req }) => {
   try {
     // console.log(req.headers, 'Gateway req headers');
-    if (req.headers.app !== 'lgcomm') {
-      if (req.headers.authorization) {
-        const token = req.headers.authorization;
-        const decoded: any = decodeToken(token);
-        console.log(decoded, 'tokenDecoded');
+        if (req.headers.app !== 'lgcomm') {
+      if (req.headers.authorization || req.cookies.token) {
+        const token = req.headers.authorization || req.cookies.token;
+        const decoded: any = await decodeToken(token);
         if (!decoded.data) {
           throw new UnauthorizedException(UNAUTHORIZED_USER);
         }
@@ -57,7 +56,9 @@ const handleAuth = async ({ req }) => {
           {
             headers: {
               userid: decoded.data.userId,
-              lang:req.headers?.lang ?? 'en'
+              lang:req.headers?.lang ?? 'en',
+              authorization: token,
+
             },
           },
         );
@@ -174,7 +175,11 @@ const handleAuth = async ({ req }) => {
     GraphQLModule.forRoot<ApolloGatewayDriverConfig>({
       server: {
         context: handleAuth,
-        cors: true,
+        cors: {
+            origin:['http://localhost:8080'],
+            credentials: true,
+            methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         },
         formatError: (error: any) => {
           const errorObj = {
             success: false,
